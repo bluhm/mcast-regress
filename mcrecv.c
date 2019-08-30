@@ -16,6 +16,7 @@
  */
 
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -32,12 +33,12 @@ void __dead
 usage(void)
 {
 	fprintf(stderr,
-"mcrecv [-b] [-g group] [-i ifaddr] [-p port] [-t timeout]\n"
-"    -b              fork to background\n"
+"mcrecv [-g group] [-i ifaddr] [-p port] [-t timeout] [mcsend ...] \n"
 "    -g group        multicast group\n"
 "    -i ifaddr       multicast interface address\n"
 "    -p port         destination port number\n"
-"    -t timeout      timeout in seconds\n");
+"    -t timeout      receive timeout in seconds\n"
+"    mcsend ...      after setting up receive, fork and exec send command\n");
 	exit(2);
 }
 
@@ -49,18 +50,16 @@ main(int argc, char *argv[])
 	const char *errstr, *group, *ifaddr;
 	char msg[256];
 	ssize_t n;
-	int ch, s, back, port;
+	int ch, s, port, status;
 	unsigned int timeout;
+	pid_t pid;
 
-	back = 0;
 	group = "224.0.0.123";
 	ifaddr = "0.0.0.0";
 	port = 12345;
 	timeout = 0;
-	while ((ch = getopt(argc, argv, "bg:i:p:t:")) != -1) {
+	while ((ch = getopt(argc, argv, "g:i:p:t:")) != -1) {
 		switch (ch) {
-		case 'b':
-			back = 1;
 		case 'g':
 			group = optarg;
 			break;
@@ -83,8 +82,6 @@ main(int argc, char *argv[])
 	}
 	argc -= optind;
 	argv += optind;
-	if (argc)
-		usage();
 
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s == -1)
@@ -105,14 +102,14 @@ main(int argc, char *argv[])
 	if (bind(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
 		err(1, "bind %s:%d", group, port);
 
-	if (back) {
-		switch (fork()) {
+	if (argc) {
+		pid = fork();
+		switch (pid) {
 		case -1:
 			err(1, "fork");
 		case 0:
-			break;
-		default:
-			_exit(0);
+			execvp(argv[0], argv);
+			err(1, "exec %s", argv[0]);
 		}
 	}
 	if (timeout) {
@@ -124,6 +121,13 @@ main(int argc, char *argv[])
 		err(1, "recv");
 	msg[n] = '\0';
 	printf("<<< %s\n", msg);
+
+	if (argc) {
+		if (waitpid(pid, &status, 0) == -1)
+			err(1, "waitpid %d", pid);
+		if (status)
+			errx(1, "%s %d", argv[0], status);
+	}
 
 	return 0;
 }
