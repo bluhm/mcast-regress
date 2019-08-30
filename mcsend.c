@@ -23,6 +23,7 @@
 #include <err.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <strings.h>
 #include <unistd.h>
 
 void __dead usage(void);
@@ -30,10 +31,12 @@ void __dead usage(void);
 void __dead
 usage(void)
 {
-	fprintf(stderr, "mcsend [-i ifaddr] [-g group] [-p port] [-t timeout]\n"
-	    "    -i ifaddr       multicast interface address\n"
-	    "    -g group        multicast group\n"
-	    "    -p port         destination port number\n");
+	fprintf(stderr, 
+"mcsend [-g group] [-i ifaddr] [-m message] [-p port]\n"
+"    -g group        multicast group\n"
+"    -i ifaddr       multicast interface address\n"
+"    -m message      message in payload\n"
+"    -p port         destination port number\n");
 	exit(2);
 }
 
@@ -42,21 +45,25 @@ main(int argc, char *argv[])
 {
 	struct sockaddr_in sin;
 	struct in_addr addr;
-	const char *errstr, *ifaddr, *group, *port;
-	char buf[] = "foo";
+	const char *errstr, *group, *ifaddr, *msg, *port;
+	size_t len;
 	ssize_t n;
 	int ch, s, portnum;
 
-	ifaddr = NULL;
 	group = "224.0.0.123";
+	ifaddr = NULL;
+	msg = "foo";
 	port = "12345";
-	while ((ch = getopt(argc, argv, "g:i:p:")) != -1) {
+	while ((ch = getopt(argc, argv, "g:i:m:p:")) != -1) {
 		switch (ch) {
 		case 'g':
 			group = optarg;
 			break;
 		case 'i':
 			ifaddr = optarg;
+			break;
+		case 'm':
+			msg = optarg;
 			break;
 		case 'p':
 			port = optarg;
@@ -90,12 +97,13 @@ main(int argc, char *argv[])
 	if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
 		err(1, "connect %s:%d", group, portnum);
 
-	n = send(s, buf, sizeof(buf) - 1, 0);
+	len = strlen(msg);
+	n = send(s, msg, len, 0);
 	if (n == -1)
 		err(1, "send");
-	if (n != sizeof(buf) - 1)
+	if ((size_t)n != len)
 		errx(1, "send %zd", n);
-	printf(">>> %s\n", buf);
+	printf(">>> %s\n", msg);
 
 	return 0;
 }

@@ -31,11 +31,12 @@ void __dead usage(void);
 void __dead
 usage(void)
 {
-	fprintf(stderr, "mcrecv [-i ifaddr] [-g group] [-p port] [-t timeout]\n"
-	    "    -i ifaddr       multicast interface address\n"
-	    "    -g group        multicast group\n"
-	    "    -p port         destination port number\n"
-	    "    -t timeout      timeout in seconds\n");
+	fprintf(stderr,
+"mcrecv [-g group] [-i ifaddr] [-p port] [-t timeout]\n"
+"    -g group        multicast group\n"
+"    -i ifaddr       multicast interface address\n"
+"    -p port         destination port number\n"
+"    -t timeout      timeout in seconds\n");
 	exit(2);
 }
 
@@ -44,14 +45,14 @@ main(int argc, char *argv[])
 {
 	struct sockaddr_in sin;
 	struct ip_mreq mreq;
-	const char *errstr, *ifaddr, *group, *port;
-	char buf[16];
+	const char *errstr, *group, *ifaddr, *port;
+	char msg[256];
 	ssize_t n;
 	int ch, s, portnum;
 	unsigned int timeout;
 
-	ifaddr = "0.0.0.0";
 	group = "224.0.0.123";
+	ifaddr = "0.0.0.0";
 	port = "12345";
 	timeout = 0;
 	while ((ch = getopt(argc, argv, "g:i:p:t:")) != -1) {
@@ -103,13 +104,11 @@ main(int argc, char *argv[])
 		if (alarm(timeout) == (unsigned  int)-1)
 			err(1, "alarm %u", timeout);
 	}
-	n = recv(s, buf, sizeof(buf) - 1, 0);
+	n = recv(s, msg, sizeof(msg) - 1, 0);
 	if (n == -1)
 		err(1, "recv");
-	if (n == 0)
-		errx(1, "recv EOF");
-	buf[n] = '\0';
-	printf("<<< %s\n", buf);
+	msg[n] = '\0';
+	printf("<<< %s\n", msg);
 
 	return 0;
 }
