@@ -21,6 +21,7 @@
 #include <netinet/in.h>
 
 #include <err.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -30,10 +31,11 @@ void __dead usage(void);
 void __dead
 usage(void)
 {
-	fprintf(stderr, "mcrecv [-i ifaddr] [-g group] [-p port]\n"
+	fprintf(stderr, "mcrecv [-i ifaddr] [-g group] [-p port] [-t timeout]\n"
 	    "    -i ifaddr       multicast interface address\n"
 	    "    -g group        multicast group\n"
-	    "    -p port         destination port number\n");
+	    "    -p port         destination port number\n"
+	    "    -t timeout      timeout in seconds\n");
 	exit(2);
 }
 
@@ -45,12 +47,14 @@ main(int argc, char *argv[])
 	const char *errstr, *ifaddr, *group, *port;
 	char buf[16];
 	ssize_t n;
-	int ch, s, pnum;
+	int ch, s, portnum;
+	unsigned int timeout;
 
 	ifaddr = "0.0.0.0";
 	group = "224.0.0.123";
 	port = "12345";
-	while ((ch = getopt(argc, argv, "g:i:p:")) != -1) {
+	timeout = 0;
+	while ((ch = getopt(argc, argv, "g:i:p:t:")) != -1) {
 		switch (ch) {
 		case 'g':
 			group = optarg;
@@ -60,6 +64,11 @@ main(int argc, char *argv[])
 			break;
 		case 'p':
 			port = optarg;
+			break;
+		case 't':
+			timeout = strtonum(optarg, 1, INT_MAX, &errstr);
+			if (errstr != NULL)
+				errx(1, "tiimeout is %s: %s", errstr, optarg);
 			break;
 		default:
 			usage();
@@ -81,15 +90,19 @@ main(int argc, char *argv[])
 
 	sin.sin_len = sizeof(sin);
 	sin.sin_family = AF_INET;
-	pnum = strtonum(port, 1, 0xffff, &errstr);
+	portnum = strtonum(port, 1, 0xffff, &errstr);
 	if (errstr != NULL)
 		errx(1, "port number is %s: %s", errstr, port);
-	sin.sin_port = htons(pnum);
+	sin.sin_port = htons(portnum);
 	if (inet_pton(AF_INET, group, &sin.sin_addr) == -1)
 		err(1, "inet_pton %s", group);
 	if (bind(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
-		err(1, "bind %s:%d", group, pnum);
+		err(1, "bind %s:%d", group, portnum);
 
+	if (timeout) {
+		if (alarm(timeout) == (unsigned  int)-1)
+			err(1, "alarm %u", timeout);
+	}
 	n = recv(s, buf, sizeof(buf) - 1, 0);
 	if (n == -1)
 		err(1, "recv");

@@ -30,7 +30,7 @@ void __dead usage(void);
 void __dead
 usage(void)
 {
-	fprintf(stderr, "mcsend [-i ifaddr] [-g group] [-p port]\n"
+	fprintf(stderr, "mcsend [-i ifaddr] [-g group] [-p port] [-t timeout]\n"
 	    "    -i ifaddr       multicast interface address\n"
 	    "    -g group        multicast group\n"
 	    "    -p port         destination port number\n");
@@ -45,7 +45,7 @@ main(int argc, char *argv[])
 	const char *errstr, *ifaddr, *group, *port;
 	char buf[] = "foo";
 	ssize_t n;
-	int ch, s, pnum;
+	int ch, s, portnum;
 
 	ifaddr = NULL;
 	group = "224.0.0.123";
@@ -81,14 +81,14 @@ main(int argc, char *argv[])
 
 	sin.sin_len = sizeof(sin);
 	sin.sin_family = AF_INET;
-	pnum = strtonum(port, 1, 0xffff, &errstr);
+	portnum = strtonum(port, 1, 0xffff, &errstr);
 	if (errstr != NULL)
 		errx(1, "port number is %s: %s", errstr, port);
-	sin.sin_port = htons(pnum);
+	sin.sin_port = htons(portnum);
 	if (inet_pton(AF_INET, group, &sin.sin_addr) == -1)
 		err(1, "inet_pton %s", group);
 	if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
-		err(1, "connect %s:%d", group, pnum);
+		err(1, "connect %s:%d", group, portnum);
 
 	n = send(s, buf, sizeof(buf) - 1, 0);
 	if (n == -1)
