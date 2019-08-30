@@ -32,7 +32,8 @@ void __dead
 usage(void)
 {
 	fprintf(stderr,
-"mcrecv [-g group] [-i ifaddr] [-p port] [-t timeout]\n"
+"mcrecv [-b] [-g group] [-i ifaddr] [-p port] [-t timeout]\n"
+"    -b              fork to background\n"
 "    -g group        multicast group\n"
 "    -i ifaddr       multicast interface address\n"
 "    -p port         destination port number\n"
@@ -45,18 +46,21 @@ main(int argc, char *argv[])
 {
 	struct sockaddr_in sin;
 	struct ip_mreq mreq;
-	const char *errstr, *group, *ifaddr, *port;
+	const char *errstr, *group, *ifaddr;
 	char msg[256];
 	ssize_t n;
-	int ch, s, portnum;
+	int ch, s, back, port;
 	unsigned int timeout;
 
+	back = 0;
 	group = "224.0.0.123";
 	ifaddr = "0.0.0.0";
-	port = "12345";
+	port = 12345;
 	timeout = 0;
-	while ((ch = getopt(argc, argv, "g:i:p:t:")) != -1) {
+	while ((ch = getopt(argc, argv, "bg:i:p:t:")) != -1) {
 		switch (ch) {
+		case 'b':
+			back = 1;
 		case 'g':
 			group = optarg;
 			break;
@@ -64,12 +68,14 @@ main(int argc, char *argv[])
 			ifaddr = optarg;
 			break;
 		case 'p':
-			port = optarg;
+			port= strtonum(optarg, 1, 0xffff, &errstr);
+			if (errstr != NULL)
+				errx(1, "port is %s: %s", errstr, optarg);
 			break;
 		case 't':
 			timeout = strtonum(optarg, 1, INT_MAX, &errstr);
 			if (errstr != NULL)
-				errx(1, "tiimeout is %s: %s", errstr, optarg);
+				errx(1, "timeout is %s: %s", errstr, optarg);
 			break;
 		default:
 			usage();
@@ -77,6 +83,8 @@ main(int argc, char *argv[])
 	}
 	argc -= optind;
 	argv += optind;
+	if (argc)
+		usage();
 
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s == -1)
@@ -91,15 +99,22 @@ main(int argc, char *argv[])
 
 	sin.sin_len = sizeof(sin);
 	sin.sin_family = AF_INET;
-	portnum = strtonum(port, 1, 0xffff, &errstr);
-	if (errstr != NULL)
-		errx(1, "port number is %s: %s", errstr, port);
-	sin.sin_port = htons(portnum);
+	sin.sin_port = htons(port);
 	if (inet_pton(AF_INET, group, &sin.sin_addr) == -1)
 		err(1, "inet_pton %s", group);
 	if (bind(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
-		err(1, "bind %s:%d", group, portnum);
+		err(1, "bind %s:%d", group, port);
 
+	if (back) {
+		switch (fork()) {
+		case -1:
+			err(1, "fork");
+		case 0:
+			break;
+		default:
+			_exit(0);
+		}
+	}
 	if (timeout) {
 		if (alarm(timeout) == (unsigned  int)-1)
 			err(1, "alarm %u", timeout);
