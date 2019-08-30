@@ -28,6 +28,6 @@ run-localhost-noloop:
 	./mcrecv -f recv.log -i 127.0.0.1 -n 1 -- \
 	./mcsend -f send.log -i 127.0.0.1 -l 0 -m '${MSG}'
 	grep '> ${MSG}$$' send.log
-	! grep '< ${MSG}$$' recv.log
+	! grep '< ' recv.log
 
 .include <bsd.regress.mk>
