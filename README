@@ -1,0 +1,8 @@
+Test IPv4 multicast packets.
+
+mcsend  - send multicat UDP packet
+mcrecv  - receive multicast UDP packet
+
+Use two programs to send and receive multicast packets.  After
+setting up the socket, the receiver forks and execs the sender to
+avoid races.  If the test fails, the receiver runs into a timeout.
