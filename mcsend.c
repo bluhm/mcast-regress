@@ -38,7 +38,7 @@ usage(void)
 "    -i ifaddr       multicast interface address\n"
 "    -m message      message in payload, maximum 255 characters, default foo\n"
 "    -l loop         disable or enable loopback, 0 or 1, default enable\n"
-"    -p port         destination port number\n");
+"    -p port         destination port number, default 12345\n");
 	exit(2);
 }
 

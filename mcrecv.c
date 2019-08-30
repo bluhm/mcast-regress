@@ -85,7 +85,7 @@ main(int argc, char *argv[])
 				errx(1, "no timeout is %s: %s", errstr, optarg);
 			break;
 		case 'p':
-			port= strtonum(optarg, 1, 0xffff, &errstr);
+			port = strtonum(optarg, 1, 0xffff, &errstr);
 			if (errstr != NULL)
 				errx(1, "port is %s: %s", errstr, optarg);
 			break;
