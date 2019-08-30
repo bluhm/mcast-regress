@@ -1,5 +1,6 @@
 # $OpenBSD$
 
-PROGS =		mcsend
+PROG =		mcsend
+WARNINGS =	Yes
 
 .include <bsd.regress.mk>
