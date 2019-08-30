@@ -30,7 +30,7 @@ void __dead usage(void);
 void __dead
 usage(void)
 {
-	fprintf(stderr, "mcsend [-i ifaddr] [-g group] [-p port]\n"
+	fprintf(stderr, "mcrecv [-i ifaddr] [-g group] [-p port]\n"
 	    "    -i ifaddr       multicast interface address\n"
 	    "    -g group        multicast group\n"
 	    "    -p port         destination port number\n");
@@ -41,13 +41,13 @@ int
 main(int argc, char *argv[])
 {
 	struct sockaddr_in sin;
-	struct in_addr addr;
+	struct ip_mreq mreq;
 	const char *errstr, *ifaddr, *group, *port;
-	char buf[] = "foo";
+	char buf[16];
 	ssize_t n;
 	int ch, s, pnum;
 
-	ifaddr = NULL;
+	ifaddr = "0.0.0.0";
 	group = "224.0.0.123";
 	port = "12345";
 	while ((ch = getopt(argc, argv, "g:i:p:")) != -1) {
@@ -71,13 +71,13 @@ main(int argc, char *argv[])
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s == -1)
 		err(1, "socket");
-	if (ifaddr != NULL) {
-		if (inet_pton(AF_INET, ifaddr, &addr) == -1)
-			err(1, "inet_pton %s", ifaddr);
-		if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_IF, &addr,
-		    sizeof(addr)) == -1)
-			err(1, "setsockopt IP_MULTICAST_IF %s", ifaddr);
-	}
+	if (inet_pton(AF_INET, group, &mreq.imr_multiaddr) == -1)
+		err(1, "inet_pton %s", group);
+	if (inet_pton(AF_INET, ifaddr, &mreq.imr_interface) == -1)
+		err(1, "inet_pton %s", ifaddr);
+	if (setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
+	    sizeof(mreq)) == -1)
+		err(1, "setsockopt IP_ADD_MEMBERSHIP %s %s", group, ifaddr);
 
 	sin.sin_len = sizeof(sin);
 	sin.sin_family = AF_INET;
@@ -87,15 +87,16 @@ main(int argc, char *argv[])
 	sin.sin_port = htons(pnum);
 	if (inet_pton(AF_INET, group, &sin.sin_addr) == -1)
 		err(1, "inet_pton %s", group);
-	if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
-		err(1, "connect %s:%d", group, pnum);
+	if (bind(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
+		err(1, "bind %s:%d", group, pnum);
 
-	n = send(s, buf, sizeof(buf) - 1, 0);
+	n = recv(s, buf, sizeof(buf) - 1, 0);
 	if (n == -1)
-		err(1, "send");
-	if (n != sizeof(buf) - 1)
-		errx(1, "send %zd", n);
-	printf(">>> %s\n", buf);
+		err(1, "recv");
+	if (n == 0)
+		errx(1, "recv EOF");
+	buf[n] = '\0';
+	printf("<<< %s\n", buf);
 
 	return 0;
 }
