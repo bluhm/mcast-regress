@@ -23,20 +23,25 @@
 
 #include <err.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 
 void __dead usage(void);
+void sigexit(int);
 
 void __dead
 usage(void)
 {
 	fprintf(stderr,
-"mcrecv [-g group] [-i ifaddr] [-p port] [-t timeout] [mcsend ...] \n"
-"    -g group        multicast group\n"
+"mcrecv [-f file] [-g group] [-i ifaddr] [-n timeout] [-p port] [-t timeout]\n"
+"    [mcsend ...]\n"
+"    -f file         print message to log file, default stdout\n"
+"    -g group        multicast group, default 224.0.0.123\n"
 "    -i ifaddr       multicast interface address\n"
-"    -p port         destination port number\n"
+"    -n timeout      expect not to receive any message until timeout\n"
+"    -p port         destination port number, default 12345\n"
 "    -t timeout      receive timeout in seconds\n"
 "    mcsend ...      after setting up receive, fork and exec send command\n");
 	exit(2);
@@ -47,24 +52,37 @@ main(int argc, char *argv[])
 {
 	struct sockaddr_in sin;
 	struct ip_mreq mreq;
-	const char *errstr, *group, *ifaddr;
+	FILE *log;
+	const char *errstr, *file, *group, *ifaddr;
 	char msg[256];
 	ssize_t n;
-	int ch, s, port, status;
+	int ch, s, norecv, port, status;
 	unsigned int timeout;
 	pid_t pid;
 
+	log = stdout;
+	file = NULL;
 	group = "224.0.0.123";
 	ifaddr = "0.0.0.0";
+	norecv = 0;
 	port = 12345;
 	timeout = 0;
-	while ((ch = getopt(argc, argv, "g:i:p:t:")) != -1) {
+	while ((ch = getopt(argc, argv, "f:g:i:n:p:t:")) != -1) {
 		switch (ch) {
+		case 'f':
+			file = optarg;
+			break;
 		case 'g':
 			group = optarg;
 			break;
 		case 'i':
 			ifaddr = optarg;
+			break;
+		case 'n':
+			norecv = 1;
+			timeout = strtonum(optarg, 1, INT_MAX, &errstr);
+			if (errstr != NULL)
+				errx(1, "no timeout is %s: %s", errstr, optarg);
 			break;
 		case 'p':
 			port= strtonum(optarg, 1, 0xffff, &errstr);
@@ -82,6 +100,12 @@ main(int argc, char *argv[])
 	}
 	argc -= optind;
 	argv += optind;
+
+	if (file != NULL) {
+		log = fopen(file, "w");
+		if (log == NULL)
+			err(1, "fopen %s", file);
+	}
 
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s == -1)
@@ -113,6 +137,10 @@ main(int argc, char *argv[])
 		}
 	}
 	if (timeout) {
+		if (norecv) {
+			if (signal(SIGALRM, sigexit) == SIG_ERR)
+				err(1, "signal SIGALRM");
+		}
 		if (alarm(timeout) == (unsigned  int)-1)
 			err(1, "alarm %u", timeout);
 	}
@@ -120,7 +148,11 @@ main(int argc, char *argv[])
 	if (n == -1)
 		err(1, "recv");
 	msg[n] = '\0';
-	printf("<<< %s\n", msg);
+	fprintf(log, "<<< %s\n", msg);
+	fflush(log);
+
+	if (norecv)
+		errx(1, "received %s", msg);
 
 	if (argc) {
 		if (waitpid(pid, &status, 0) == -1)
@@ -130,4 +162,10 @@ main(int argc, char *argv[])
 	}
 
 	return 0;
+}
+
+void
+sigexit(int sig)
+{
+	exit(0);
 }

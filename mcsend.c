@@ -32,10 +32,11 @@ void __dead
 usage(void)
 {
 	fprintf(stderr,
-"mcsend [-g group] [-i ifaddr] [-m message] [-p port]\n"
-"    -g group        multicast group\n"
+"mcsend [-f file] [-g group] [-i ifaddr] [-m message] [-p port]\n"
+"    -f file         print message to log file, default stdout\n"
+"    -g group        multicast group, default 224.0.0.123\n"
 "    -i ifaddr       multicast interface address\n"
-"    -m message      message in payload, maximum 255 characters\n"
+"    -m message      message in payload, maximum 255 characters, default foo\n"
 "    -l loop         disable or enable loopback, 0 or 1, default enable\n"
 "    -p port         destination port number\n");
 	exit(2);
@@ -46,19 +47,25 @@ main(int argc, char *argv[])
 {
 	struct sockaddr_in sin;
 	struct in_addr addr;
-	const char *errstr, *group, *ifaddr, *msg;
+	FILE *log;
+	const char *errstr, *file, *group, *ifaddr, *msg;
 	size_t len;
 	ssize_t n;
 	int ch, s, port;
 	char loop;
 
+	log = stdout;
+	file = NULL;
 	group = "224.0.0.123";
 	ifaddr = NULL;
 	msg = "foo";
 	loop = -1;
 	port = 12345;
-	while ((ch = getopt(argc, argv, "g:i:l:m:p:")) != -1) {
+	while ((ch = getopt(argc, argv, "f:g:i:l:m:p:")) != -1) {
 		switch (ch) {
+		case 'f':
+			file = optarg;
+			break;
 		case 'g':
 			group = optarg;
 			break;
@@ -86,6 +93,12 @@ main(int argc, char *argv[])
 	argv += optind;
 	if (argc)
 		usage();
+
+	if (file != NULL) {
+		log = fopen(file, "w");
+		if (log == NULL)
+			err(1, "fopen %s", file);
+	}
 
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s == -1)
@@ -119,7 +132,8 @@ main(int argc, char *argv[])
 		err(1, "send");
 	if ((size_t)n != len)
 		errx(1, "send %zd", n);
-	printf(">>> %s\n", msg);
+	fprintf(log, ">>> %s\n", msg);
+	fflush(log);
 
 	return 0;
 }
