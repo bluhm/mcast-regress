@@ -3,7 +3,6 @@
 PROGS =			mcsend mcrecv
 WARNINGS =		Yes
 CLEANFILES =		*.log
-REGRESS_TARGETS =
 MSG !!=			echo $$RANDOM
 
 REGRESS_TARGETS +=	run-localhost
@@ -24,8 +23,8 @@ run-localhost-loop:
 	grep '> ${MSG}$$' send.log
 	grep '< ${MSG}$$' recv.log
 
-REGRESS_TARGETS +=	run-localhost-noloop
-run-localhost-noloop:
+REGRESS_TARGETS +=	run-localhost-loop0
+run-localhost-loop0:
 	@echo '\n======== $@ ========'
 	# disable loop back on multicast interface, must fail
 	./mcrecv -f recv.log -i 127.0.0.1 -n 1 -- \
@@ -41,5 +40,27 @@ run-localhost-ttl0:
 	./mcsend -f send.log -i 127.0.0.1 -m '${MSG}' -t 0
 	grep '> ${MSG}$$' send.log
 	grep '< ${MSG}$$' recv.log
+
+REGRESS_TARGETS +=	run-localaddr
+run-localaddr:
+	@echo '\n======== $@ ========'
+	# send over a local physical interface
+	./mcrecv -f recv.log -i ${LOCAL_ADDR} -r 5 -- \
+	./mcsend -f send.log -i ${LOCAL_ADDR} -m '${MSG}'
+	grep '> ${MSG}$$' send.log
+	grep '< ${MSG}$$' recv.log
+
+REGRESS_TARGETS +=	run-localaddr-ttl0
+run-localaddr-ttl0:
+	@echo '\n======== $@ ========'
+	# send over a local physical interface
+	./mcrecv -f recv.log -i ${LOCAL_ADDR} -r 5 -- \
+	./mcsend -f send.log -i ${LOCAL_ADDR} -m '${MSG}' -t 0
+	grep '> ${MSG}$$' send.log
+	grep '< ${MSG}$$' recv.log
+
+.if empty(LOCAL_ADDR)
+REGRESS_SKIP_TARGETS +=	${REGRESS_TARGETS:M*-localaddr*}
+.endif
 
 .include <bsd.regress.mk>
