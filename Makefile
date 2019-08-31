@@ -2,7 +2,7 @@
 
 PROGS =			mcsend mcrecv
 WARNINGS =		Yes
-CLEANFILES =		*.log
+CLEANFILES =		stamp-* *.log
 MSG !!=			echo $$RANDOM
 
 REGRESS_TARGETS +=	run-localhost
@@ -50,17 +50,63 @@ run-localaddr:
 	grep '> ${MSG}$$' send.log
 	grep '< ${MSG}$$' recv.log
 
+REGRESS_TARGETS +=	run-localaddr-loop0
+run-localaddr-loop0:
+	@echo '\n======== $@ ========'
+	# send over physical interface to loopback, ttl is 0
+	./mcrecv -f recv.log -i ${LOCAL_ADDR} -n 1 -- \
+	./mcsend -f send.log -i ${LOCAL_ADDR} -l 0 -m '${MSG}'
+	grep '> ${MSG}$$' send.log
+	! grep '< ' recv.log
+
 REGRESS_TARGETS +=	run-localaddr-ttl0
 run-localaddr-ttl0:
 	@echo '\n======== $@ ========'
-	# send over a local physical interface
+	# send over physical interface to loopback, ttl is 0
 	./mcrecv -f recv.log -i ${LOCAL_ADDR} -r 5 -- \
 	./mcsend -f send.log -i ${LOCAL_ADDR} -m '${MSG}' -t 0
 	grep '> ${MSG}$$' send.log
 	grep '< ${MSG}$$' recv.log
 
+REGRESS_TARGETS +=	run-remoteaddr
+run-remoteaddr:
+	@echo '\n======== $@ ========'
+	# send over a local physical interface
+	./mcrecv -f recv.log -i ${LOCAL_ADDR} -r 5 -- \
+	ssh ${REMOTE_SSH} ${.OBJDIR}/mcsend \
+	    -f send.log -i ${REMOTE_ADDR} -m '${MSG}'
+	grep '< ${MSG}$$' recv.log
+
+REGRESS_TARGETS +=	run-remoteaddr-loop0
+run-remoteaddr-loop0:
+	@echo '\n======== $@ ========'
+	# send over a local physical interface
+	./mcrecv -f recv.log -i ${LOCAL_ADDR} -r 5 -- \
+	ssh ${REMOTE_SSH} ${.OBJDIR}/mcsend \
+	    -f send.log -i ${REMOTE_ADDR} -l 0 -m '${MSG}'
+	grep '< ${MSG}$$' recv.log
+
+REGRESS_TARGETS +=	run-remoteaddr-ttl0
+run-remoteaddr-ttl0:
+	@echo '\n======== $@ ========'
+	# send over a local physical interface
+	./mcrecv -f recv.log -i ${LOCAL_ADDR} -n 2 -- \
+	ssh ${REMOTE_SSH} ${.OBJDIR}/mcsend \
+	    -f send.log -i ${REMOTE_ADDR} -m '${MSG}' -t 0
+	! grep '< ' recv.log
+
+stamp-build-remote: ${SRCS}
+	ssh ${REMOTE_SSH} ${MAKE} -C ${.CURDIR} ${PROGS}
+	date >$@
+
+${REGRESS_TARGETS}: ${PROGS}
+${REGRESS_TARGETS:M*-remoteaddr*}: stamp-build-remote
+
 .if empty(LOCAL_ADDR)
 REGRESS_SKIP_TARGETS +=	${REGRESS_TARGETS:M*-localaddr*}
+.endif
+.if empty(REMOTE_ADDR) || empty(REMOTE_SSH)
+REGRESS_SKIP_TARGETS +=	${REGRESS_TARGETS:M*-remoteaddr*}
 .endif
 
 .include <bsd.regress.mk>
