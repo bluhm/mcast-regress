@@ -35,14 +35,14 @@ void __dead
 usage(void)
 {
 	fprintf(stderr,
-"mcrecv [-f file] [-g group] [-i ifaddr] [-n timeout] [-p port] [-t timeout]\n"
+"mcrecv [-f file] [-g group] [-i ifaddr] [-n timeout] [-p port] [-r timeout]\n"
 "    [mcsend ...]\n"
 "    -f file         print message to log file, default stdout\n"
 "    -g group        multicast group, default 224.0.0.123\n"
 "    -i ifaddr       multicast interface address\n"
 "    -n timeout      expect not to receive any message until timeout\n"
 "    -p port         destination port number, default 12345\n"
-"    -t timeout      receive timeout in seconds\n"
+"    -r timeout      receive timeout in seconds\n"
 "    mcsend ...      after setting up receive, fork and exec send command\n");
 	exit(2);
 }
@@ -67,7 +67,7 @@ main(int argc, char *argv[])
 	norecv = 0;
 	port = 12345;
 	timeout = 0;
-	while ((ch = getopt(argc, argv, "f:g:i:n:p:t:")) != -1) {
+	while ((ch = getopt(argc, argv, "f:g:i:n:p:r:")) != -1) {
 		switch (ch) {
 		case 'f':
 			file = optarg;
@@ -89,7 +89,7 @@ main(int argc, char *argv[])
 			if (errstr != NULL)
 				errx(1, "port is %s: %s", errstr, optarg);
 			break;
-		case 't':
+		case 'r':
 			timeout = strtonum(optarg, 1, INT_MAX, &errstr);
 			if (errstr != NULL)
 				errx(1, "timeout is %s: %s", errstr, optarg);

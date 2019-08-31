@@ -37,8 +37,9 @@ usage(void)
 "    -g group        multicast group, default 224.0.0.123\n"
 "    -i ifaddr       multicast interface address\n"
 "    -m message      message in payload, maximum 255 characters, default foo\n"
-"    -l loop         disable or enable loopback, 0 or 1, default enable\n"
-"    -p port         destination port number, default 12345\n");
+"    -l loop         disable or enable loopback, 0 or 1\n"
+"    -p port         destination port number, default 12345\n"
+"    -t ttl          set multicast ttl\n");
 	exit(2);
 }
 
@@ -51,17 +52,17 @@ main(int argc, char *argv[])
 	const char *errstr, *file, *group, *ifaddr, *msg;
 	size_t len;
 	ssize_t n;
-	int ch, s, port;
-	char loop;
+	int ch, s, loop, port, ttl;
 
 	log = stdout;
 	file = NULL;
 	group = "224.0.0.123";
 	ifaddr = NULL;
-	msg = "foo";
 	loop = -1;
+	msg = "foo";
 	port = 12345;
-	while ((ch = getopt(argc, argv, "f:g:i:l:m:p:")) != -1) {
+	ttl = -1;
+	while ((ch = getopt(argc, argv, "f:g:i:l:m:p:t:")) != -1) {
 		switch (ch) {
 		case 'f':
 			file = optarg;
@@ -84,6 +85,11 @@ main(int argc, char *argv[])
 			port = strtonum(optarg, 1, 0xffff, &errstr);
 			if (errstr != NULL)
 				errx(1, "port is %s: %s", errstr, optarg);
+			break;
+		case 't':
+			ttl = strtonum(optarg, 0, 255, &errstr);
+			if (errstr != NULL)
+				errx(1, "ttl is %s: %s", errstr, optarg);
 			break;
 		default:
 			usage();
@@ -111,9 +117,18 @@ main(int argc, char *argv[])
 			err(1, "setsockopt IP_MULTICAST_IF %s", ifaddr);
 	}
 	if (loop != -1) {
-		if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_LOOP, &loop,
-		    sizeof(loop)) == -1)
+		unsigned char value = loop;
+
+		if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_LOOP, &value,
+		    sizeof(value)) == -1)
 			err(1, "setsockopt loop %d", loop);
+	}
+	if (ttl != -1) {
+		unsigned char value = ttl;
+
+		if (setsockopt(s, IPPROTO_IP, IP_MULTICAST_TTL, &value,
+		    sizeof(value)) == -1)
+			err(1, "setsockopt ttl %d", ttl);
 	}
 
 	sin.sin_len = sizeof(sin);
