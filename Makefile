@@ -1,6 +1,6 @@
 # $OpenBSD$
 
-PROGS =			mcsend mcrecv
+PROGS =			mcsend mcrecv mcroute
 WARNINGS =		Yes
 CLEANFILES =		stamp-* *.log
 MSG !!=			echo $$RANDOM
@@ -95,18 +95,40 @@ run-remoteaddr-ttl0:
 	    -f send.log -i ${REMOTE_ADDR} -m '${MSG}' -t 0
 	! grep '< ' recv.log
 
-stamp-build-remote: ${SRCS}
+REGRESS_TARGETS +=	run-forward
+run-forward:
+	@echo '\n======== $@ ========'
+	# XXX
+	ssh ${REMOTE_SSH} ${SUDO} ${.OBJDIR}/mcroute \
+	    -f route.log -g 224.0.1.123 -i ${REMOTE_ADDR} -o ${OTHER_ADDR} \
+	    -r 5 &
+	sleep 1
+	./mcrecv -f recv.log -g 224.0.1.123 -i ${TARGET_ADDR} -r 2 -- \
+	./mcsend -f send.log -g 224.0.1.123 -i ${LOCAL_ADDR} \
+	    -l 0 -m '${MSG}' -t 2
+	grep '> ${MSG}$$' send.log
+	grep '< ${MSG}$$' recv.log
+
+stamp-build-remote:
 	ssh ${REMOTE_SSH} ${MAKE} -C ${.CURDIR} ${PROGS}
 	date >$@
 
 ${REGRESS_TARGETS}: ${PROGS}
 ${REGRESS_TARGETS:M*-remoteaddr*}: stamp-build-remote
+${REGRESS_TARGETS:M*-forward*}: stamp-build-remote
 
 .if empty(LOCAL_ADDR)
 REGRESS_SKIP_TARGETS +=	${REGRESS_TARGETS:M*-localaddr*}
 .endif
 .if empty(REMOTE_ADDR) || empty(REMOTE_SSH)
 REGRESS_SKIP_TARGETS +=	${REGRESS_TARGETS:M*-remoteaddr*}
+REGRESS_SKIP_TARGETS +=	${REGRESS_TARGETS:M*-forward*}
 .endif
 
+check-setup:
+	# route 224.0.0.0/4
+	# net.inet.ip.mforwarding
+
 .include <bsd.regress.mk>
+
+stamp-build-remote: ${SRCS}
