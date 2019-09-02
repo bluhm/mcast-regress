@@ -5,6 +5,16 @@ WARNINGS =		Yes
 CLEANFILES =		stamp-* *.log
 MSG !!=			echo $$RANDOM
 
+REGRESS_SETUP_ONCE =	setup-sudo
+setup-sudo:
+	${SUDO} true
+.if ! empty(REMOTE_SSH)
+	ssh -t ${REMOTE_SSH} ${SUDO} true
+.endif
+.if ! empty(TARGET_SSH)
+	ssh -t ${TARGET_SSH} ${SUDO} true
+.endif
+
 REGRESS_TARGETS +=	run-localhost
 run-localhost:
 	@echo '\n======== $@ ========'
