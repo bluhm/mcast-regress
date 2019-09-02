@@ -91,31 +91,35 @@ run-remoteaddr-ttl0:
 	@echo '\n======== $@ ========'
 	# send over a local physical interface
 	./mcrecv -f recv.log -i ${LOCAL_ADDR} -n 2 -- \
-	ssh ${REMOTE_SSH} ${.OBJDIR}/mcsend \
-	    -f send.log -i ${REMOTE_ADDR} -m '${MSG}' -t 0
+	ssh ${REMOTE_SSH} ${.OBJDIR}/mcsend -f send.log \
+	    -i ${REMOTE_ADDR} -m '${MSG}' -t 0
 	! grep '< ' recv.log
 
 REGRESS_TARGETS +=	run-forward
 run-forward:
 	@echo '\n======== $@ ========'
-	# XXX
-	ssh ${REMOTE_SSH} ${SUDO} ${.OBJDIR}/mcroute \
-	    -f route.log -g 224.0.1.123 -i ${REMOTE_ADDR} -o ${OTHER_ADDR} \
-	    -r 5 &
-	sleep 1
-	./mcrecv -f recv.log -g 224.0.1.123 -i ${TARGET_ADDR} -r 2 -- \
-	./mcsend -f send.log -g 224.0.1.123 -i ${LOCAL_ADDR} \
-	    -l 0 -m '${MSG}' -t 2
+	# start multicast router, start receiver, start sender
+	ssh ${REMOTE_SSH} ${SUDO} ${.OBJDIR}/mcroute -b -f route.log \
+	    -g 224.0.1.123 -i ${OTHER_ADDR} -o ${REMOTE_ADDR} -r 5
+.if empty(TARGET_SSH)
+	./mcrecv -f recv.log -g 224.0.1.123 -i ${LOCAL_ADDR} -r 5 -- \
+	./mcsend -f send.log \
+	    -g 224.0.1.123 -i ${TARGET_ADDR} -l 0 -m '${MSG}' -t 2
+.else
+	./mcrecv -f recv.log -g 224.0.1.123 -i ${LOCAL_ADDR} -r 5 -- \
+	ssh ${TARGET_SSH} ${.OBJDIR}/mcsend -f send.log \
+	    -g 224.0.1.123 -i ${TARGET_ADDR} -l 0 -m '${MSG}' -t 2
+.endif
 	grep '> ${MSG}$$' send.log
 	grep '< ${MSG}$$' recv.log
 
-stamp-build-remote:
+stamp-remote-build:
 	ssh ${REMOTE_SSH} ${MAKE} -C ${.CURDIR} ${PROGS}
 	date >$@
 
 ${REGRESS_TARGETS}: ${PROGS}
-${REGRESS_TARGETS:M*-remoteaddr*}: stamp-build-remote
-${REGRESS_TARGETS:M*-forward*}: stamp-build-remote
+${REGRESS_TARGETS:M*-remoteaddr*}: stamp-remote-build
+${REGRESS_TARGETS:M*-forward*}: stamp-remote-build
 
 .if empty(LOCAL_ADDR)
 REGRESS_SKIP_TARGETS +=	${REGRESS_TARGETS:M*-localaddr*}
@@ -131,4 +135,4 @@ check-setup:
 
 .include <bsd.regress.mk>
 
-stamp-build-remote: ${SRCS}
+stamp-remote-build: ${SRCS}

@@ -46,7 +46,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
-#include <sys/wait.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -54,6 +53,7 @@
 
 #include <err.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -69,10 +69,11 @@ void __dead
 usage(void)
 {
 	fprintf(stderr,
-"mcroute [-f file] [-g group] -i ifaddr -o outaddr [-r timeout]\n"
+"mcroute [-f file] [-g group] -i ifaddr [-n timeout] -o outaddr [-r timeout]\n"
 "    -f file         print message to log file, default stdout\n"
 "    -g group        multicast group, default 224.0.0.123\n"
 "    -i ifaddr       multicast interface address\n"
+"    -n timeout      expect not to receive any message until timeout\n"
 "    -o outaddr      outgoing interface address\n"
 "    -r timeout      receive timeout in seconds\n");
 	exit(2);
@@ -89,18 +90,24 @@ main(int argc, char *argv[])
 	char *buf;
 	size_t needed;
 	unsigned long pktin, pktout;
-	int value, ch, s;
+	int value, ch, s, fd, background, norecv;
 	unsigned int timeout;
+	pid_t pid;
 	int mib[] = { CTL_NET, PF_INET, IPPROTO_IP, IPCTL_MRTVIF };
 
+	background = 0;
 	log = stdout;
 	file = NULL;
 	group = "224.0.0.123";
 	ifaddr = NULL;
+	norecv = 0;
 	outaddr = NULL;
 	timeout = 0;
-	while ((ch = getopt(argc, argv, "f:g:i:o:r:")) != -1) {
+	while ((ch = getopt(argc, argv, "bf:g:i:n:o:r:")) != -1) {
 		switch (ch) {
+		case 'b':
+			background = 1;
+			break;
 		case 'f':
 			file = optarg;
 			break;
@@ -109,6 +116,12 @@ main(int argc, char *argv[])
 			break;
 		case 'i':
 			ifaddr = optarg;
+			break;
+		case 'n':
+			norecv = 1;
+			timeout = strtonum(optarg, 1, INT_MAX, &errstr);
+			if (errstr != NULL)
+				errx(1, "no timeout is %s: %s", errstr, optarg);
 			break;
 		case 'o':
 			outaddr = optarg;
@@ -167,9 +180,32 @@ main(int argc, char *argv[])
 	if (setsockopt(s, IPPROTO_IP, MRT_ADD_MFC, &mfc, sizeof(mfc)) == -1)
 		err(1, "setsockopt MRT_ADD_MFC %s", ifaddr);
 
+        if (background) {
+                pid = fork();
+                switch (pid) {
+                case -1:
+                        err(1, "fork");
+                case 0:
+			fd = open("/dev/null", O_RDWR);
+			if (fd == -1)
+				err(1, "open /dev/null");
+			if (dup2(fd, 0) == -1)
+				err(1, "dup 0");
+			if (dup2(fd, 1) == -1)
+				err(1, "dup 1");
+			if (dup2(fd, 2) == -1)
+				err(1, "dup 2");
+			break;
+		default:
+			_exit(0);
+                }
+        }
+
 	if (timeout) {
-		if (signal(SIGALRM, sigexit) == SIG_ERR)
-			err(1, "signal SIGALRM");
+		if (norecv) {
+			if (signal(SIGALRM, sigexit) == SIG_ERR)
+				err(1, "signal SIGALRM");
+		}
 		if (alarm(timeout) == (unsigned  int)-1)
 			err(1, "alarm %u", timeout);
 	}
@@ -204,13 +240,16 @@ main(int argc, char *argv[])
 	} while (pktin == 0 || pktout == 0);
 	free(buf);
 
+	if (norecv)
+		errx(1, "pktin %lu, pktout %lu", pktin, pktout);
+
 	return 0;
 }
 
 void
 sigexit(int sig)
 {
-	exit(0);
+	_exit(0);
 }
 
 /* from netstat(8) */

@@ -167,5 +167,5 @@ main(int argc, char *argv[])
 void
 sigexit(int sig)
 {
-	exit(0);
+	_exit(0);
 }
