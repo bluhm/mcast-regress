@@ -117,9 +117,16 @@ stamp-remote-build:
 	ssh ${REMOTE_SSH} ${MAKE} -C ${.CURDIR} ${PROGS}
 	date >$@
 
+stamp-target-build:
+	ssh ${TARGET_SSH} ${MAKE} -C ${.CURDIR} ${PROGS}
+	date >$@
+
 ${REGRESS_TARGETS}: ${PROGS}
 ${REGRESS_TARGETS:M*-remoteaddr*}: stamp-remote-build
 ${REGRESS_TARGETS:M*-forward*}: stamp-remote-build
+.if ! empty(TARGET_SSH)
+${REGRESS_TARGETS:M*-forward*}: stamp-target-build
+.endif
 
 .if empty(LOCAL_ADDR)
 REGRESS_SKIP_TARGETS +=	${REGRESS_TARGETS:M*-localaddr*}
@@ -136,3 +143,4 @@ check-setup:
 .include <bsd.regress.mk>
 
 stamp-remote-build: ${SRCS}
+stamp-target-build: ${SRCS}
