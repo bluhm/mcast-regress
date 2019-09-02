@@ -105,12 +105,12 @@ run-forward:
 	./mcrecv -f recv.log -g 224.0.1.123 -i ${LOCAL_ADDR} -r 5 -- \
 	./mcsend -f send.log \
 	    -g 224.0.1.123 -i ${TARGET_ADDR} -l 0 -m '${MSG}' -t 2
+	grep '> ${MSG}$$' send.log
 .else
 	./mcrecv -f recv.log -g 224.0.1.123 -i ${LOCAL_ADDR} -r 5 -- \
 	ssh ${TARGET_SSH} ${.OBJDIR}/mcsend -f send.log \
 	    -g 224.0.1.123 -i ${TARGET_ADDR} -l 0 -m '${MSG}' -t 2
 .endif
-	grep '> ${MSG}$$' send.log
 	grep '< ${MSG}$$' recv.log
 
 stamp-remote-build:
@@ -137,8 +137,8 @@ REGRESS_SKIP_TARGETS +=	${REGRESS_TARGETS:M*-forward*}
 .endif
 
 check-setup:
-	# route 224.0.0.0/4
-	# net.inet.ip.mforwarding
+	! ssh ${REMOTE_SSH} route -n get 224/4
+	ssh ${REMOTE_SSH} sysctl net.inet.ip.mforwarding | fgrep =1
 
 .include <bsd.regress.mk>
 
