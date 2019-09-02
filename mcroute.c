@@ -59,6 +59,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 void __dead usage(void);
@@ -213,7 +214,10 @@ main(int argc, char *argv[])
 	buf = NULL;
 	pktin = pktout = 0;
 	do {
-		sleep(1);
+		struct timespec sleeptime = { 0, 10000000 };
+
+		if (nanosleep(&sleeptime, NULL) == -1)
+			err(1, "nanosleep");
 		needed = get_sysctl(mib, sizeof(mib) / sizeof(mib[0]), &buf);
 		for (vinfo = (struct vifinfo *)buf;
 		    (char *)vinfo < buf + needed;
