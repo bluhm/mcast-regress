@@ -7,8 +7,10 @@ avoid races.  If the test fails, the receiver runs into a timeout.
 The test programs are:
 mcsend  - send one multicat UDP packet
 mcrecv  - receive one multicast UDP packet
+mcroute - route one multicast UDP packet
 
-The options for mcsend and mcrecv are:
+The options for mcsend and mcrecv and mcroute are:
+-b              fork to background after setup
 -f file         print message to log file, default stdout
 -g group        multicast group, default 224.0.0.123
 -i ifaddr       multicast interface address
@@ -16,6 +18,14 @@ The options for mcsend and mcrecv are:
 -m message      message in payload, maximum 255 characters, default foo
 -n timeout      expect not to receive any message until timeout
 -p port         destination port number, default 12345
+-o outaddr      outgoing interface address
 -r timeout      receive timeout in seconds
 -t ttl          set multicast ttl
 mcsend ...      after setting up receive, fork and exec send command
+
+With mcroute packets are sent over a multicast router.  The kernel
+route is installed statically.  The machines sender, router, receiver
+are involved.  Receiver is on the local machine, route is on remote
+machine.  The sender can share the local machine or be started on
+a target machine, depending on the setup.  This is controlled via
+environment.

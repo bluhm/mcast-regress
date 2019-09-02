@@ -70,7 +70,9 @@ void __dead
 usage(void)
 {
 	fprintf(stderr,
-"mcroute [-f file] [-g group] -i ifaddr [-n timeout] -o outaddr [-r timeout]\n"
+"mcroute [-b] [-f file] [-g group] -i ifaddr [-n timeout] -o outaddr\n"
+"    [-r timeout]\n"
+"    -b              fork to background after setup\n"
 "    -f file         print message to log file, default stdout\n"
 "    -g group        multicast group, default 224.0.0.123\n"
 "    -i ifaddr       multicast interface address\n"
