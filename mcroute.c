@@ -158,14 +158,14 @@ main(int argc, char *argv[])
 		err(1, "setsockopt MRT_INIT");
 
 	memset(&vif, 0, sizeof(vif));
-        vif.vifc_vifi = 0;
+	vif.vifc_vifi = 0;
 	if (inet_pton(AF_INET, ifaddr, &vif.vifc_lcl_addr) == -1)
 		err(1, "inet_pton %s", ifaddr);
 	if (setsockopt(s, IPPROTO_IP, MRT_ADD_VIF, &vif, sizeof(vif)) == -1)
 		err(1, "setsockopt MRT_ADD_VIF %s", ifaddr);
 
 	memset(&vif, 0, sizeof(vif));
-        vif.vifc_vifi = 1;
+	vif.vifc_vifi = 1;
 	if (inet_pton(AF_INET, outaddr, &vif.vifc_lcl_addr) == -1)
 		err(1, "inet_pton %s", outaddr);
 	if (setsockopt(s, IPPROTO_IP, MRT_ADD_VIF, &vif, sizeof(vif)) == -1)
@@ -174,18 +174,18 @@ main(int argc, char *argv[])
 	memset(&mfc, 0, sizeof(mfc));
 	if (inet_pton(AF_INET, group, &mfc.mfcc_mcastgrp) == -1)
 		err(1, "inet_pton %s", group);
-        mfc.mfcc_parent = 0;
-        mfc.mfcc_ttls[1] = 1;
+	mfc.mfcc_parent = 0;
+	mfc.mfcc_ttls[1] = 1;
 
 	if (setsockopt(s, IPPROTO_IP, MRT_ADD_MFC, &mfc, sizeof(mfc)) == -1)
 		err(1, "setsockopt MRT_ADD_MFC %s", ifaddr);
 
-        if (background) {
-                pid = fork();
-                switch (pid) {
-                case -1:
-                        err(1, "fork");
-                case 0:
+	if (background) {
+		pid = fork();
+		switch (pid) {
+		case -1:
+			err(1, "fork");
+		case 0:
 			fd = open("/dev/null", O_RDWR);
 			if (fd == -1)
 				err(1, "open /dev/null");
@@ -198,8 +198,8 @@ main(int argc, char *argv[])
 			break;
 		default:
 			_exit(0);
-                }
-        }
+		}
+	}
 
 	if (timeout) {
 		if (norecv) {
