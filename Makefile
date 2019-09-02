@@ -113,6 +113,24 @@ run-forward:
 .endif
 	grep '< ${MSG}$$' recv.log
 
+REGRESS_TARGETS +=	run-forward-ttl1
+run-forward-ttl1:
+	@echo '\n======== $@ ========'
+	# start multicast router, start receiver, start sender
+	ssh ${REMOTE_SSH} ${SUDO} ${.OBJDIR}/mcroute -b -f route.log \
+	    -g 224.0.1.123 -i ${OTHER_ADDR} -o ${REMOTE_ADDR} -n 3
+.if empty(TARGET_SSH)
+	./mcrecv -f recv.log -g 224.0.1.123 -i ${LOCAL_ADDR} -n 2 -- \
+	./mcsend -f send.log \
+	    -g 224.0.1.123 -i ${TARGET_ADDR} -l 0 -m '${MSG}' -t 1
+	grep '> ${MSG}$$' send.log
+.else
+	./mcrecv -f recv.log -g 224.0.1.123 -i ${LOCAL_ADDR} -n 2 -- \
+	ssh ${TARGET_SSH} ${.OBJDIR}/mcsend -f send.log \
+	    -g 224.0.1.123 -i ${TARGET_ADDR} -l 0 -m '${MSG}' -t 1
+.endif
+	! grep '< ' recv.log
+
 stamp-remote-build:
 	ssh ${REMOTE_SSH} ${MAKE} -C ${.CURDIR} ${PROGS}
 	date >$@
