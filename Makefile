@@ -5,15 +5,14 @@ WARNINGS =		Yes
 CLEANFILES =		stamp-* *.log
 MSG !!=			echo $$RANDOM
 
-SEND =		${.OBJDIR}/mcsend
-RECV =		${.OBJDIR}/mcrecv
-ROUTE =		${.OBJDIR}/mcroute
-LOCALHOST =	127.0.0.1
-LOCAL =		${LOCAL_ADDR}
-REMOTE =	${REMOTE_ADDR}
-OTHER =		${OTHER_ADDR}
-TARGET =	${TARGET_ADDR}
-GROUP_LOCAL =	224.0.0.123
+SEND =		${.OBJDIR}/mc6send
+RECV =		${.OBJDIR}/mc6recv
+ROUTE =		${.OBJDIR}/mc6route
+LOCALHOST =	lo0
+LOCAL =		${LOCAL_IF}
+REMOTE =	${REMOTE_IF}
+OTHER =		${OTHER_IF}
+TARGET =	${TARGET_IF}
 
 REGRESS_SETUP_ONCE =	setup-sudo
 setup-sudo:
