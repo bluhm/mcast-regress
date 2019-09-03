@@ -126,7 +126,7 @@ main(int argc, char *argv[])
 	if (inet_pton(AF_INET6, group, &sin6.sin6_addr) == -1)
 		err(1, "inet_pton %s", group);
 	if (bind(s, (struct sockaddr *)&sin6, sizeof(sin6)) == -1)
-		err(1, "bind %s:%d", group, port);
+		err(1, "bind [%s]:%d", group, port);
 
 	if (argc) {
 		pid = fork();

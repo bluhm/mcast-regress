@@ -133,10 +133,10 @@ main(int argc, char *argv[])
 	sin6.sin6_len = sizeof(sin6);
 	sin6.sin6_family = AF_INET6;
 	sin6.sin6_port = htons(port);
-	if (inet_pton(AF_INET, group, &sin6.sin6_addr) == -1)
+	if (inet_pton(AF_INET6, group, &sin6.sin6_addr) == -1)
 		err(1, "inet_pton %s", group);
 	if (connect(s, (struct sockaddr *)&sin6, sizeof(sin6)) == -1)
-		err(1, "connect %s:%d", group, port);
+		err(1, "connect [%s]:%d", group, port);
 
 	len = strlen(msg);
 	if (len >= 255)
