@@ -13,6 +13,7 @@ LOCAL =		${LOCAL_ADDR}
 REMOTE =	${REMOTE_ADDR}
 OTHER =		${OTHER_ADDR}
 TARGET =	${TARGET_ADDR}
+GROUP_LOCAL =	224.0.0.123
 
 REGRESS_SETUP_ONCE =	setup-sudo
 setup-sudo:
@@ -60,6 +61,15 @@ run-localhost-ttl0:
 	grep '> ${MSG}$$' send.log
 	grep '< ${MSG}$$' recv.log
 
+REGRESS_TARGETS +=	run-localhost-local
+run-localhost-local:
+	@echo '\n======== $@ ========'
+	# send over localhost interface
+	${RECV} -f recv.log -g ${GROUP_LOCAL} -i ${LOCALHOST} -r 5 -- \
+	${SEND} -f send.log -g ${GROUP_LOCAL} -i ${LOCALHOST} -m '${MSG}' -t 0
+	grep '> ${MSG}$$' send.log
+	grep '< ${MSG}$$' recv.log
+
 REGRESS_TARGETS +=	run-localaddr
 run-localaddr:
 	@echo '\n======== $@ ========'
@@ -84,6 +94,15 @@ run-localaddr-ttl0:
 	# send over physical interface to loopback, ttl is 0
 	${RECV} -f recv.log -i ${LOCAL} -r 5 -- \
 	${SEND} -f send.log -i ${LOCAL} -m '${MSG}' -t 0
+	grep '> ${MSG}$$' send.log
+	grep '< ${MSG}$$' recv.log
+
+REGRESS_TARGETS +=	run-localaddr-local
+run-localaddr-local:
+	@echo '\n======== $@ ========'
+	# send over physical interface to loopback, ttl is 0
+	${RECV} -f recv.log -g ${GROUP_LOCAL} -i ${LOCAL} -r 5 -- \
+	${SEND} -f send.log -g ${GROUP_LOCAL} -i ${LOCAL} -m '${MSG}' -t 0
 	grep '> ${MSG}$$' send.log
 	grep '< ${MSG}$$' recv.log
 
@@ -118,18 +137,18 @@ REGRESS_TARGETS +=	run-forward
 run-forward:
 	@echo '\n======== $@ ========'
 	# start multicast router, start receiver, start sender
-	ssh ${REMOTE_SSH} ${SUDO} pkill mcroute || true
+	ssh ${REMOTE_SSH} ${SUDO} pkill mcroute mc6route || true
 	ssh ${REMOTE_SSH} ${SUDO} ${ROUTE} -f ${.OBJDIR}/route.log \
-	    -b -g 224.0.1.123 -i ${OTHER} -o ${REMOTE} -r 5
+	    -b -i ${OTHER} -o ${REMOTE} -r 5
 .if empty(TARGET_SSH)
-	${RECV} -f recv.log -g 224.0.1.123 -i ${LOCAL} -r 5 -- \
+	${RECV} -f recv.log -i ${LOCAL} -r 5 -- \
 	${SEND} -f send.log \
-	    -g 224.0.1.123 -i ${TARGET} -l 0 -m '${MSG}' -t 2
+	    -i ${TARGET} -l 0 -m '${MSG}' -t 2
 	grep '> ${MSG}$$' send.log
 .else
-	${RECV} -f recv.log -g 224.0.1.123 -i ${LOCAL} -r 5 -- \
+	${RECV} -f recv.log -i ${LOCAL} -r 5 -- \
 	ssh ${TARGET_SSH} ${SEND} -f ${.OBJDIR}/send.log \
-	    -g 224.0.1.123 -i ${TARGET} -l 0 -m '${MSG}' -t 2
+	    -i ${TARGET} -l 0 -m '${MSG}' -t 2
 .endif
 	grep '< ${MSG}$$' recv.log
 
@@ -137,18 +156,18 @@ REGRESS_TARGETS +=	run-forward-ttl1
 run-forward-ttl1:
 	@echo '\n======== $@ ========'
 	# try to get ttl 1 over multicast router, must fail
-	ssh ${REMOTE_SSH} ${SUDO} pkill mcroute || true
+	ssh ${REMOTE_SSH} ${SUDO} pkill mcroute mc6route || true
 	ssh ${REMOTE_SSH} ${SUDO} ${ROUTE} -f ${.OBJDIR}/route.log \
-	    -b -g 224.0.1.123 -i ${OTHER} -o ${REMOTE} -n 3
+	    -b -i ${OTHER} -o ${REMOTE} -n 3
 .if empty(TARGET_SSH)
-	${RECV} -f recv.log -g 224.0.1.123 -i ${LOCAL} -n 2 -- \
+	${RECV} -f recv.log -i ${LOCAL} -n 2 -- \
 	${SEND} -f send.log \
-	    -g 224.0.1.123 -i ${TARGET} -l 0 -m '${MSG}' -t 1
+	    -i ${TARGET} -l 0 -m '${MSG}' -t 1
 	grep '> ${MSG}$$' send.log
 .else
-	${RECV} -f recv.log -g 224.0.1.123 -i ${LOCAL} -n 2 -- \
+	${RECV} -f recv.log -i ${LOCAL} -n 2 -- \
 	ssh ${TARGET_SSH} ${SEND} -f ${.OBJDIR}/send.log \
-	    -g 224.0.1.123 -i ${TARGET} -l 0 -m '${MSG}' -t 1
+	    -i ${TARGET} -l 0 -m '${MSG}' -t 1
 .endif
 	! grep '< ' recv.log
 
@@ -156,18 +175,18 @@ REGRESS_TARGETS +=	run-forward-local
 run-forward-local:
 	@echo '\n======== $@ ========'
 	# try to get local multicast group over router, must fail
-	ssh ${REMOTE_SSH} ${SUDO} pkill mcroute || true
+	ssh ${REMOTE_SSH} ${SUDO} pkill mcroute mc6route || true
 	ssh ${REMOTE_SSH} ${SUDO} ${ROUTE} -f ${.OBJDIR}/route.log \
-	    -b -g 224.0.0.123 -i ${OTHER} -o ${REMOTE} -n 3
+	    -b -g ${GROUP_LOCAL} -i ${OTHER} -o ${REMOTE} -n 3
 .if empty(TARGET_SSH)
-	${RECV} -f recv.log -g 224.0.0.123 -i ${LOCAL} -n 2 -- \
+	${RECV} -f recv.log -g ${GROUP_LOCAL} -i ${LOCAL} -n 2 -- \
 	${SEND} -f send.log \
-	    -g 224.0.0.123 -i ${TARGET} -l 0 -m '${MSG}' -t 2
+	    -g ${GROUP_LOCAL} -i ${TARGET} -l 0 -m '${MSG}' -t 2
 	grep '> ${MSG}$$' send.log
 .else
-	${RECV} -f recv.log -g 224.0.0.123 -i ${LOCAL} -n 2 -- \
+	${RECV} -f recv.log -g ${GROUP_LOCAL} -i ${LOCAL} -n 2 -- \
 	ssh ${TARGET_SSH} ${SEND} -f ${.OBJDIR}/send.log \
-	    -g 224.0.0.123 -i ${TARGET} -l 0 -m '${MSG}' -t 2
+	    -g ${GROUP_LOCAL} -i ${TARGET} -l 0 -m '${MSG}' -t 2
 .endif
 	! grep '< ' recv.log
 
