@@ -178,7 +178,7 @@ main(int argc, char *argv[])
 		err(1, "setsockopt MRT6_ADD_MIF %s", outname);
 
 	memset(&mfc, 0, sizeof(mfc));
-	if (inet_pton(AF_INET6, group, &mfc.mf6cc_mcastgrp) == -1)
+	if (inet_pton(AF_INET6, group, &mfc.mf6cc_mcastgrp.sin6_addr) == -1)
 		err(1, "inet_pton %s", group);
 	mfc.mf6cc_parent = 0;
 	IF_SET(1, &mfc.mf6cc_ifset);
