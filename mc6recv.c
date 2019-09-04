@@ -27,6 +27,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 void __dead usage(void);
@@ -120,6 +121,7 @@ main(int argc, char *argv[])
 	    sizeof(mreq6)) == -1)
 		err(1, "setsockopt IPV6_JOIN_GROUP %s %s", group, ifname);
 
+	memset(&sin6, 0, sizeof(sin6));
 	sin6.sin6_len = sizeof(sin6);
 	sin6.sin6_family = AF_INET6;
 	sin6.sin6_port = htons(port);

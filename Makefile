@@ -13,6 +13,7 @@ LOCAL =		${LOCAL_IF}
 REMOTE =	${REMOTE_IF}
 OTHER =		${OTHER_IF}
 TARGET =	${TARGET_IF}
+GROUP_LOCAL =	ff02::123
 
 REGRESS_SETUP_ONCE =	setup-sudo
 setup-sudo:
