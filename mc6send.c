@@ -53,6 +53,7 @@ main(int argc, char *argv[])
 	size_t len;
 	ssize_t n;
 	int ch, s, loop, port, ttl;
+	unsigned int ifindex;
 
 	log = stdout;
 	file = NULL;
@@ -110,8 +111,6 @@ main(int argc, char *argv[])
 	if (s == -1)
 		err(1, "socket");
 	if (ifname != NULL) {
-		unsigned int ifindex;
-
 		ifindex = if_nametoindex(ifname);
 		if (ifindex == 0)
 			err(1, "if_nametoindex %s", ifname);
@@ -136,6 +135,12 @@ main(int argc, char *argv[])
 	sin6.sin6_port = htons(port);
 	if (inet_pton(AF_INET6, group, &sin6.sin6_addr) == -1)
 		err(1, "inet_pton %s", group);
+	if (ifname != NULL &&
+	    (IN6_IS_ADDR_LINKLOCAL(&sin6.sin6_addr) ||
+	    IN6_IS_ADDR_MC_LINKLOCAL(&sin6.sin6_addr) ||
+	    IN6_IS_ADDR_MC_INTFACELOCAL(&sin6.sin6_addr))) {
+		sin6.sin6_scope_id = ifindex;
+	}
 	if (connect(s, (struct sockaddr *)&sin6, sizeof(sin6)) == -1)
 		err(1, "connect [%s]:%d", group, port);
 

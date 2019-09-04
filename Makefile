@@ -221,6 +221,7 @@ REGRESS_SKIP_TARGETS +=	${REGRESS_TARGETS:M*-forward*}
 check-setup:
 	! ssh ${REMOTE_SSH} route -n get 224/4
 	ssh ${REMOTE_SSH} sysctl net.inet.ip.mforwarding | fgrep =1
+	ssh ${REMOTE_SSH} sysctl net.inet6.ip6.mforwarding | fgrep =1
 
 .include <bsd.regress.mk>
 
