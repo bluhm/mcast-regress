@@ -1,6 +1,6 @@
 # $OpenBSD: Makefile,v 1.2 2019/09/03 00:00:04 bluhm Exp $
 
-PROGS =			mcsend mcrecv mcroute mc6send mc6recv
+PROGS =			mcsend mcrecv mcroute mc6send mc6recv mc6route
 WARNINGS =		Yes
 CLEANFILES =		stamp-* *.log
 MSG !!=			echo $$RANDOM
