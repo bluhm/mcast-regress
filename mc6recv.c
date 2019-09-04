@@ -127,6 +127,11 @@ main(int argc, char *argv[])
 	sin6.sin6_port = htons(port);
 	if (inet_pton(AF_INET6, group, &sin6.sin6_addr) == -1)
 		err(1, "inet_pton %s", group);
+	if (IN6_IS_ADDR_LINKLOCAL(&sin6.sin6_addr) ||
+	    IN6_IS_ADDR_MC_LINKLOCAL(&sin6.sin6_addr) ||
+	    IN6_IS_ADDR_MC_INTFACELOCAL(&sin6.sin6_addr)) {
+		sin6.sin6_scope_id = mreq6.ipv6mr_interface;
+	}
 	if (bind(s, (struct sockaddr *)&sin6, sizeof(sin6)) == -1)
 		err(1, "bind [%s]:%d", group, port);
 
