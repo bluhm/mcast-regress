@@ -15,8 +15,8 @@ OTHER =		${OTHER_IF}
 TARGET =	${TARGET_IF}
 GROUP_LOCAL =	ff02::123
 
-# Sending link-local packages via loopback does not work due to
-# wrong scope id.  This has to be investigated.
+# Currently sending link-local packets via loopback does not work
+# due to wrong scope id.  This has to be investigated.
 REGRESS_EXPECTED_FAILURES = run-localhost-local
 
 REGRESS_SETUP_ONCE =	setup-sudo
