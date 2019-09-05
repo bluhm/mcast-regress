@@ -1,4 +1,4 @@
-# $OpenBSD: Makefile,v 1.2 2019/09/05 02:44:36 bluhm Exp $
+# $OpenBSD: Makefile,v 1.3 2019/09/05 18:27:19 bluhm Exp $
 
 PROGS =			mc6send mc6recv mc6route
 WARNINGS =		Yes
