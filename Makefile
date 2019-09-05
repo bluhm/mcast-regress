@@ -19,14 +19,14 @@ GROUP_LOCAL =	ff02::123
 # due to wrong scope id.  This has to be investigated.
 REGRESS_EXPECTED_FAILURES = run-localhost-local
 
-REGRESS_SETUP_ONCE =	setup-sudo
-setup-sudo:
-	${SUDO} true
-.if ! empty(REMOTE_SSH)
+.if make (regress) || make (all)
+.BEGIN:
+.if ! empty (REMOTE_SSH)
 	ssh -t ${REMOTE_SSH} ${SUDO} true
 .endif
 .if ! empty(TARGET_SSH)
 	ssh -t ${TARGET_SSH} ${SUDO} true
+.endif
 .endif
 
 REGRESS_TARGETS +=	run-localhost
